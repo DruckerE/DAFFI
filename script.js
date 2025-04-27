@@ -1,101 +1,72 @@
-const app = document.getElementById('app');
+// script.js
 
-// Create main container
-const mainContainer = document.createElement('div');
-mainContainer.className = 'main-container';
+async function fetchAIResponse(prompt) {
+  const apiKey = process.env.NEXT_PUBLIC_API_KEY;
 
-// ====== CHAT CONTAINER ====== //
-const chatContainer = document.createElement('div');
-chatContainer.className = 'chat-container';
+  if (!apiKey) {
+    console.error("API key not found. Make sure it is set in Vercel.");
+    return;
+  }
 
-// Chat header
-const chatHeader = document.createElement('header');
-chatHeader.className = 'chat-header';
-chatHeader.innerHTML = '<h1>Air Force Chat</h1>';
+  try {
+    const response = await fetch('https://api.openai.com/v1/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "text-davinci-003",
+        prompt: prompt,
+        max_tokens: 100
+      })
+    });
 
-// Chat messages
-const chatMessages = document.createElement('main');
-chatMessages.className = 'chat-messages';
-chatMessages.id = 'chatMessages';
+    const data = await response.json();
 
-// Starter bot message
-const botMessage = document.createElement('div');
-botMessage.className = 'message bot';
-botMessage.textContent = 'Welcome, Airman! How can I assist you today?';
-
-chatMessages.appendChild(botMessage);
-
-// Chat form
-const chatForm = document.createElement('form');
-chatForm.className = 'chat-form';
-chatForm.id = 'chatForm';
-
-const chatInput = document.createElement('input');
-chatInput.type = 'text';
-chatInput.id = 'chatInput';
-chatInput.placeholder = 'Type your message...';
-chatInput.required = true;
-
-const chatButton = document.createElement('button');
-chatButton.type = 'submit';
-chatButton.textContent = 'Send';
-
-chatForm.appendChild(chatInput);
-chatForm.appendChild(chatButton);
-
-// Append parts
-chatContainer.appendChild(chatHeader);
-chatContainer.appendChild(chatMessages);
-chatContainer.appendChild(chatForm);
-
-mainContainer.appendChild(chatContainer);
-app.appendChild(mainContainer);
-
-// ====== Chat functionality ======
-const API_KEY = "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"; 
-
-chatForm.addEventListener('submit', async function (e) {
-  e.preventDefault();
-  const userText = chatInput.value.trim();
-  if (userText) {
-    const userMessage = document.createElement('div');
-    userMessage.className = 'message user';
-    userMessage.textContent = userText;
-    chatMessages.appendChild(userMessage);
-    chatInput.value = '';
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-
-    // Loading animation
-    const loadingMessage = document.createElement('div');
-    loadingMessage.className = 'message bot';
-    loadingMessage.textContent = '...';
-    chatMessages.appendChild(loadingMessage);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-
-    // Call OpenAI API
-    try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${API_KEY}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-3.5-turbo', // You can change model if you want
-          messages: [{ role: 'user', content: userText }]
-        })
-      });
-
-      const data = await response.json();
-      const botReply = data.choices[0].message.content.trim();
-
-      // Update loading message with real reply
-      loadingMessage.textContent = botReply;
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-
-    } catch (error) {
-      loadingMessage.textContent = '⚠️ Error connecting to AI.';
-      console.error('Error:', error);
+    if (data.choices && data.choices.length > 0) {
+      displayResponse(data.choices[0].text);
+    } else {
+      displayResponse("No response from AI.");
     }
+
+  } catch (error) {
+    console.error("Error connecting to AI:", error);
+    displayResponse("Error connecting to AI.");
+  }
+}
+
+// Display the AI's response in your app
+function displayResponse(text) {
+  const chatMessages = document.getElementById('chatMessages');
+  const messageDiv = document.createElement('div');
+  messageDiv.className = 'message bot';
+  messageDiv.textContent = text;
+  chatMessages.appendChild(messageDiv);
+}
+
+// Handle form submission
+document.addEventListener('DOMContentLoaded', () => {
+  const chatForm = document.getElementById('chatForm');
+
+  if (chatForm) {
+    chatForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const chatInput = document.getElementById('chatInput');
+      const userText = chatInput.value.trim();
+      if (userText !== "") {
+        displayUserMessage(userText);
+        fetchAIResponse(userText);
+        chatInput.value = "";
+      }
+    });
   }
 });
+
+function displayUserMessage(text) {
+  const chatMessages = document.getElementById('chatMessages');
+  const userDiv = document.createElement('div');
+  userDiv.className = 'message user';
+  userDiv.textContent = text;
+  chatMessages.appendChild(userDiv);
+}
